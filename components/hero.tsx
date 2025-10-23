@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Upload, Sparkles } from "lucide-react"
 import Link from "next/link"
+import { ShareButton } from "@/components/share-button"
 
 export function Hero() {
   return (
@@ -49,6 +50,12 @@ export function Hero() {
               Explore Good Moments
             </Button>
           </Link>
+          <ShareButton
+            variant="outline"
+            size="lg"
+            title="PURELYPOS - Share Positivity"
+            description="Join PURELYPOS - a place to upload, share, and enjoy positive videos. No hate, no noise, just kindness and hope!"
+          />
         </div>
       </div>
     </section>

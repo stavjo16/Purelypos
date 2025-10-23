@@ -8,6 +8,7 @@ import { Upload, AlertCircle } from "lucide-react"
 import { DeleteVideoButton } from "@/components/delete-video-button"
 import { ThumbsUpButton } from "@/components/thumbs-up-button"
 import { isAdmin } from "@/lib/supabase/is-admin"
+import { ShareButton } from "@/components/share-button"
 
 export const dynamic = "force-dynamic"
 
@@ -217,12 +218,21 @@ export default async function VideosPage() {
                     )}
                   </CardContent>
                   <CardFooter>
-                    <ThumbsUpButton
-                      videoId={video.id}
-                      initialLikeCount={likeCount}
-                      initialIsLiked={isLiked}
-                      isAuthenticated={!!user}
-                    />
+                    <div className="flex items-center gap-2 w-full">
+                      <ThumbsUpButton
+                        videoId={video.id}
+                        initialLikeCount={likeCount}
+                        initialIsLiked={isLiked}
+                        isAuthenticated={!!user}
+                      />
+                      <ShareButton
+                        url={`https://purelypos.com/videos/${video.id}`}
+                        title={video.title}
+                        description={video.description || "Check out this positive video on PURELYPOS!"}
+                        variant="ghost"
+                        size="sm"
+                      />
+                    </div>
                   </CardFooter>
                 </Card>
               )

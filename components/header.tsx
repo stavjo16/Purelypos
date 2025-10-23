@@ -14,6 +14,9 @@ export function Header() {
 
         {/* Navigation */}
         <nav className="flex items-center gap-4">
+          <Link href="/creator">
+            <Button variant="ghost">Meet PurelyPOS's Creator</Button>
+          </Link>
           <Link href="/videos">
             <Button variant="ghost">Videos</Button>
           </Link>
