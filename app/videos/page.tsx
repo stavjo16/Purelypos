@@ -2,33 +2,71 @@ import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
-import { Upload } from "lucide-react"
+import { Upload, AlertCircle } from "lucide-react"
 import { DeleteVideoButton } from "@/components/delete-video-button"
 import { ThumbsUpButton } from "@/components/thumbs-up-button"
 import { isAdmin } from "@/lib/supabase/is-admin"
 
 export const dynamic = "force-dynamic"
 
-function getEmbedUrl(url: string): string | null {
+function getEmbedUrl(url: string): { embedUrl: string | null; isDirectVideo: boolean; error?: string } {
   try {
     const urlObj = new URL(url)
 
-    // YouTube
+    // Check if it's a direct video file
+    const videoExtensions = [".mp4", ".webm", ".ogg", ".mov", ".avi"]
+    const pathname = urlObj.pathname.toLowerCase()
+    if (videoExtensions.some((ext) => pathname.endsWith(ext))) {
+      return { embedUrl: url, isDirectVideo: true }
+    }
+
+    // YouTube - handle multiple URL formats
     if (urlObj.hostname.includes("youtube.com") || urlObj.hostname.includes("youtu.be")) {
-      const videoId = urlObj.hostname.includes("youtu.be") ? urlObj.pathname.slice(1) : urlObj.searchParams.get("v")
-      return videoId ? `https://www.youtube.com/embed/${videoId}` : null
+      let videoId: string | null = null
+
+      if (urlObj.hostname.includes("youtu.be")) {
+        // Short URL: youtu.be/VIDEO_ID
+        videoId = urlObj.pathname.slice(1).split("?")[0]
+      } else if (urlObj.pathname.includes("/shorts/")) {
+        // Shorts: youtube.com/shorts/VIDEO_ID
+        videoId = urlObj.pathname.split("/shorts/")[1]?.split("?")[0]
+      } else if (urlObj.pathname.includes("/embed/")) {
+        // Already embedded: youtube.com/embed/VIDEO_ID
+        videoId = urlObj.pathname.split("/embed/")[1]?.split("?")[0]
+      } else {
+        // Standard: youtube.com/watch?v=VIDEO_ID
+        videoId = urlObj.searchParams.get("v")
+      }
+
+      if (videoId) {
+        return { embedUrl: `https://www.youtube.com/embed/${videoId}`, isDirectVideo: false }
+      }
     }
 
-    // Vimeo
+    // Vimeo - handle multiple URL formats
     if (urlObj.hostname.includes("vimeo.com")) {
-      const videoId = urlObj.pathname.split("/").filter(Boolean)[0]
-      return videoId ? `https://player.vimeo.com/video/${videoId}` : null
+      const pathParts = urlObj.pathname.split("/").filter(Boolean)
+      const videoId = pathParts[pathParts.length - 1] // Get last segment
+
+      if (videoId && /^\d+$/.test(videoId)) {
+        return { embedUrl: `https://player.vimeo.com/video/${videoId}`, isDirectVideo: false }
+      }
     }
 
-    return null
+    // Unsupported platform
+    return {
+      embedUrl: null,
+      isDirectVideo: false,
+      error: "This video platform is not supported. Please use YouTube, Vimeo, or a direct video file link.",
+    }
   } catch {
-    return null
+    return {
+      embedUrl: null,
+      isDirectVideo: false,
+      error: "Invalid video URL",
+    }
   }
 }
 
@@ -115,7 +153,10 @@ export default async function VideosPage() {
         {videos && videos.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
             {videos.map((video) => {
-              const embedUrl = video.video_source === "link" ? getEmbedUrl(video.video_url) : null
+              const videoInfo =
+                video.video_source === "link"
+                  ? getEmbedUrl(video.video_url)
+                  : { embedUrl: video.video_url, isDirectVideo: true }
               const isOwner = user && video.user_id === user.id
               const canDelete = userIsAdmin || isOwner
               const likeCount = likeCountMap.get(video.id) || 0
@@ -152,17 +193,27 @@ export default async function VideosPage() {
                     )}
                   </CardHeader>
                   <CardContent>
-                    {embedUrl ? (
+                    {videoInfo.error ? (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{videoInfo.error}</AlertDescription>
+                      </Alert>
+                    ) : videoInfo.embedUrl && !videoInfo.isDirectVideo ? (
                       <div className="aspect-video w-full">
                         <iframe
-                          src={embedUrl}
+                          src={videoInfo.embedUrl}
                           className="w-full h-full rounded-lg"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowFullScreen
                         />
                       </div>
+                    ) : videoInfo.embedUrl ? (
+                      <video src={videoInfo.embedUrl} controls className="w-full rounded-lg" />
                     ) : (
-                      <video src={video.video_url} controls className="w-full rounded-lg" />
+                      <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>Unable to load video</AlertDescription>
+                      </Alert>
                     )}
                   </CardContent>
                   <CardFooter>

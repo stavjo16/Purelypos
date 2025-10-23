@@ -2,28 +2,61 @@ import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
-import { Play } from "lucide-react"
+import { Play, AlertCircle } from "lucide-react"
 
-function getEmbedUrl(url: string): string | null {
+function getEmbedUrl(url: string): { embedUrl: string | null; isDirectVideo: boolean; error?: string } {
   try {
     const urlObj = new URL(url)
 
-    // YouTube
+    // Check if it's a direct video file
+    const videoExtensions = [".mp4", ".webm", ".ogg", ".mov", ".avi"]
+    const pathname = urlObj.pathname.toLowerCase()
+    if (videoExtensions.some((ext) => pathname.endsWith(ext))) {
+      return { embedUrl: url, isDirectVideo: true }
+    }
+
+    // YouTube - handle multiple URL formats
     if (urlObj.hostname.includes("youtube.com") || urlObj.hostname.includes("youtu.be")) {
-      const videoId = urlObj.hostname.includes("youtu.be") ? urlObj.pathname.slice(1) : urlObj.searchParams.get("v")
-      return videoId ? `https://www.youtube.com/embed/${videoId}` : null
+      let videoId: string | null = null
+
+      if (urlObj.hostname.includes("youtu.be")) {
+        videoId = urlObj.pathname.slice(1).split("?")[0]
+      } else if (urlObj.pathname.includes("/shorts/")) {
+        videoId = urlObj.pathname.split("/shorts/")[1]?.split("?")[0]
+      } else if (urlObj.pathname.includes("/embed/")) {
+        videoId = urlObj.pathname.split("/embed/")[1]?.split("?")[0]
+      } else {
+        videoId = urlObj.searchParams.get("v")
+      }
+
+      if (videoId) {
+        return { embedUrl: `https://www.youtube.com/embed/${videoId}`, isDirectVideo: false }
+      }
     }
 
-    // Vimeo
+    // Vimeo - handle multiple URL formats
     if (urlObj.hostname.includes("vimeo.com")) {
-      const videoId = urlObj.pathname.split("/").filter(Boolean)[0]
-      return videoId ? `https://player.vimeo.com/video/${videoId}` : null
+      const pathParts = urlObj.pathname.split("/").filter(Boolean)
+      const videoId = pathParts[pathParts.length - 1]
+
+      if (videoId && /^\d+$/.test(videoId)) {
+        return { embedUrl: `https://player.vimeo.com/video/${videoId}`, isDirectVideo: false }
+      }
     }
 
-    return null
+    return {
+      embedUrl: null,
+      isDirectVideo: false,
+      error: "This video platform is not supported.",
+    }
   } catch {
-    return null
+    return {
+      embedUrl: null,
+      isDirectVideo: false,
+      error: "Invalid video URL",
+    }
   }
 }
 
@@ -55,7 +88,10 @@ export async function FeaturedVideos() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           {videos.map((video) => {
-            const embedUrl = video.video_source === "link" ? getEmbedUrl(video.video_url) : null
+            const videoInfo =
+              video.video_source === "link"
+                ? getEmbedUrl(video.video_url)
+                : { embedUrl: video.video_url, isDirectVideo: true }
             const profile = profileMap.get(video.user_id)
 
             return (
@@ -84,15 +120,25 @@ export async function FeaturedVideos() {
                 </CardHeader>
                 <CardContent>
                   <div className="relative aspect-video w-full rounded-lg overflow-hidden bg-muted">
-                    {embedUrl ? (
+                    {videoInfo.error ? (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{videoInfo.error}</AlertDescription>
+                      </Alert>
+                    ) : videoInfo.embedUrl && !videoInfo.isDirectVideo ? (
                       <iframe
-                        src={embedUrl}
+                        src={videoInfo.embedUrl}
                         className="w-full h-full"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
                       />
+                    ) : videoInfo.embedUrl ? (
+                      <video src={videoInfo.embedUrl} controls className="w-full h-full object-cover" />
                     ) : (
-                      <video src={video.video_url} controls className="w-full h-full object-cover" />
+                      <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>Unable to load video</AlertDescription>
+                      </Alert>
                     )}
                   </div>
                 </CardContent>
