@@ -27,7 +27,7 @@ export function Hero() {
 
         {/* Main Headline */}
         <h2 className="text-5xl md:text-7xl font-serif font-bold text-foreground mb-6 leading-tight text-balance max-w-5xl mx-auto">
-          Be one of the first to use PURELYPOS: Let's make Life Better, together.
+          Be one of the first to POST on PURELYPOS: Let's make Life Better, together.
         </h2>
 
         {/* Subtext */}
