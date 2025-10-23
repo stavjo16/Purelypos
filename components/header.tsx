@@ -1,8 +1,14 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Sparkles } from "lucide-react"
+import { Sparkles, User } from "lucide-react"
+import { createClient } from "@/lib/supabase/server"
 
-export function Header() {
+export async function Header() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4">
@@ -20,14 +26,25 @@ export function Header() {
           <Link href="/videos">
             <Button variant="ghost">Videos</Button>
           </Link>
-          <Link href="/auth/login">
-            <Button variant="outline" className="rounded-full bg-transparent">
-              Login
-            </Button>
-          </Link>
-          <Link href="/auth/sign-up">
-            <Button className="rounded-full">Sign Up</Button>
-          </Link>
+          {user ? (
+            <Link href="/profile">
+              <Button variant="outline" className="rounded-full gap-2 bg-transparent">
+                <User className="w-4 h-4" />
+                My Profile
+              </Button>
+            </Link>
+          ) : (
+            <>
+              <Link href="/auth/login">
+                <Button variant="outline" className="rounded-full bg-transparent">
+                  Login
+                </Button>
+              </Link>
+              <Link href="/auth/sign-up">
+                <Button className="rounded-full">Sign Up</Button>
+              </Link>
+            </>
+          )}
         </nav>
       </div>
     </header>
