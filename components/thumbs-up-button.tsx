@@ -37,11 +37,14 @@ export function ThumbsUpButton({ videoId, initialLikeCount, initialIsLiked, isAu
 
       const data = await response.json()
 
-      // Update local state
       setIsLiked(data.liked)
       setLikeCount((prev) => (data.liked ? prev + 1 : prev - 1))
+
+      router.refresh()
     } catch (error) {
       console.error("Error toggling like:", error)
+      setIsLiked(initialIsLiked)
+      setLikeCount(initialLikeCount)
     } finally {
       setIsLoading(false)
     }
