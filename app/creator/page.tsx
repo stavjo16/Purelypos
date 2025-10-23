@@ -24,9 +24,7 @@ export default function CreatorPage() {
               <h2 className="text-3xl font-serif font-bold text-foreground mb-4">Welcome! 👋</h2>
 
               <p className="text-muted-foreground leading-relaxed mb-4">
-                Hi, I'm the creator of PURELYPOS. I built this platform because I believe the world needs more
-                positivity, kindness, and uplifting content. In a digital landscape often filled with negativity and
-                divisiveness, I wanted to create a space where only good vibes exist.
+                Hi, my name is Jonathan, the creator of PURELYPOS. I built this platform because I believe the world needs more positivity, kindness, and uplifting content. In a digital landscape often filled with negativity and divisiveness, I wanted to create a space where only good vibes exist.
               </p>
 
               <h3 className="text-2xl font-serif font-bold text-foreground mt-8 mb-4">The Vision</h3>
