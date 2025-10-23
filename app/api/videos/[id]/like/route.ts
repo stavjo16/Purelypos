@@ -4,6 +4,7 @@ import { type NextRequest, NextResponse } from "next/server"
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: videoId } = await params
+
     const supabase = await createClient()
 
     // Check if user is authenticated
@@ -17,12 +18,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // Check if user already liked this video
-    const { data: existingLike } = await supabase
+    const { data: existingLike, error: selectError } = await supabase
       .from("video_likes")
       .select("id")
       .eq("video_id", videoId)
       .eq("user_id", user.id)
-      .single()
+      .maybeSingle()
+
+    if (selectError) {
+      return NextResponse.json({ error: selectError.message }, { status: 500 })
+    }
 
     if (existingLike) {
       // Unlike: Remove the like
@@ -47,7 +52,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ liked: true })
     }
   } catch (error) {
-    console.error("Error toggling like:", error)
+    console.error("[v0] Error toggling like:", error)
     return NextResponse.json({ error: "Failed to toggle like" }, { status: 500 })
   }
 }
