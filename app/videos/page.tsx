@@ -1,8 +1,11 @@
 import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 import { Upload } from "lucide-react"
+import { DeleteVideoButton } from "@/components/delete-video-button"
+import { ThumbsUpButton } from "@/components/thumbs-up-button"
+import { isAdmin } from "@/lib/supabase/is-admin"
 
 export const dynamic = "force-dynamic"
 
@@ -36,12 +39,32 @@ export default async function VideosPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const userIsAdmin = user ? await isAdmin(user.id) : false
+
   // Fetch all videos
   const { data: videos, error } = await supabase.from("videos").select("*").order("created_at", { ascending: false })
 
   if (error) {
     console.error("Error fetching videos:", error)
   }
+
+  const videoIds = videos?.map((v) => v.id) || []
+
+  // Get like counts for all videos
+  const { data: likeCounts } = await supabase.from("video_likes").select("video_id").in("video_id", videoIds)
+
+  // Get current user's likes
+  const { data: userLikes } = user
+    ? await supabase.from("video_likes").select("video_id").eq("user_id", user.id).in("video_id", videoIds)
+    : { data: null }
+
+  // Create maps for quick lookup
+  const likeCountMap = new Map<string, number>()
+  likeCounts?.forEach((like) => {
+    likeCountMap.set(like.video_id, (likeCountMap.get(like.video_id) || 0) + 1)
+  })
+
+  const userLikesSet = new Set(userLikes?.map((like) => like.video_id) || [])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sunrise-50 to-sky-50">
@@ -86,59 +109,59 @@ export default async function VideosPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
             {videos.map((video) => {
               const embedUrl = video.video_source === "link" ? getEmbedUrl(video.video_url) : null
+              const isOwner = user && video.user_id === user.id
+              const canDelete = userIsAdmin || isOwner
+              const likeCount = likeCountMap.get(video.id) || 0
+              const isLiked = userLikesSet.has(video.id)
 
               return (
                 <Card key={video.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                  <CardHeader className="p-0">
-                    {video.video_source === "link" && embedUrl ? (
-                      <iframe
-                        src={embedUrl}
-                        className="w-full aspect-video"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                    ) : (
-                      <video src={video.video_url} controls className="w-full aspect-video object-cover" />
-                    )}
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg">{video.title}</CardTitle>
+                        {video.description && <CardDescription className="mt-2">{video.description}</CardDescription>}
+                      </div>
+                      {canDelete && <DeleteVideoButton videoId={video.id} />}
+                    </div>
                   </CardHeader>
-                  <CardContent className="p-4">
-                    <CardTitle className="text-lg mb-2 line-clamp-2">{video.title}</CardTitle>
-                    {video.description && (
-                      <CardDescription className="line-clamp-3">{video.description}</CardDescription>
+                  <CardContent>
+                    {embedUrl ? (
+                      <div className="aspect-video w-full">
+                        <iframe
+                          src={embedUrl}
+                          className="w-full h-full rounded-lg"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
+                    ) : (
+                      <video src={video.video_url} controls className="w-full rounded-lg" />
                     )}
-                    <p className="text-xs text-gray-500 mt-3">
-                      {new Date(video.created_at).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </p>
                   </CardContent>
+                  <CardFooter>
+                    <ThumbsUpButton
+                      videoId={video.id}
+                      initialLikeCount={likeCount}
+                      initialIsLiked={isLiked}
+                      isAuthenticated={!!user}
+                    />
+                  </CardFooter>
                 </Card>
               )
             })}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <div className="max-w-md mx-auto">
-              <div className="rounded-full bg-sunrise-100 w-20 h-20 flex items-center justify-center mx-auto mb-6">
-                <Upload className="h-10 w-10 text-sunrise-600" />
-              </div>
-              <h2 className="text-2xl font-serif font-bold text-gray-900 mb-3">No videos yet</h2>
-              <p className="text-gray-600 mb-6">Be the first to share some positivity with the community!</p>
-              {user ? (
-                <Link href="/upload">
-                  <Button size="lg">
-                    <Upload className="mr-2 h-5 w-5" />
-                    Upload Your First Video
-                  </Button>
-                </Link>
-              ) : (
-                <Link href="/auth/sign-up">
-                  <Button size="lg">Sign Up to Upload</Button>
-                </Link>
-              )}
-            </div>
+          <div className="text-center py-12">
+            <p className="text-gray-600 mb-6">No videos yet. Be the first to share something positive!</p>
+            {user && (
+              <Link href="/upload">
+                <Button size="lg">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload First Video
+                </Button>
+              </Link>
+            )}
           </div>
         )}
       </main>

@@ -13,7 +13,7 @@ export function JoinCommunity() {
 
         {/* Title */}
         <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-6 text-balance">
-          It's not just a platform. It's a movement.
+          It's not just a platform. It's our lives.
         </h2>
 
         {/* Body */}

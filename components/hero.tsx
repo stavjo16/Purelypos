@@ -26,12 +26,12 @@ export function Hero() {
 
         {/* Main Headline */}
         <h2 className="text-5xl md:text-7xl font-serif font-bold text-foreground mb-6 leading-tight text-balance max-w-5xl mx-auto">
-          Be one of the first to use PURELYPOS: Let's make it lighter, together.
+          Be one of the first to use PURELYPOS: Let's make Life Better, together.
         </h2>
 
         {/* Subtext */}
         <p className="text-xl md:text-2xl text-muted-foreground mb-12 leading-relaxed max-w-3xl mx-auto text-pretty">
-          PURELYPOS is the place to upload, share, and comment on only positive videos.
+          PURELYPOS is the place to upload, share, and comment on positive videos.
           <br />
           No hate, no noise, just people, laughter, kindness, and hope.
         </p>
