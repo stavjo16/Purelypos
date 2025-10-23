@@ -17,6 +17,11 @@ export function Header() {
           <Link href="/videos">
             <Button variant="ghost">Videos</Button>
           </Link>
+          <Link href="/auth/login">
+            <Button variant="outline" className="rounded-full bg-transparent">
+              Login
+            </Button>
+          </Link>
           <Link href="/auth/sign-up">
             <Button className="rounded-full">Sign Up</Button>
           </Link>

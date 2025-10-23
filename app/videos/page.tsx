@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Link from "next/link"
 import { Upload } from "lucide-react"
 import { DeleteVideoButton } from "@/components/delete-video-button"
@@ -41,7 +42,6 @@ export default async function VideosPage() {
 
   const userIsAdmin = user ? await isAdmin(user.id) : false
 
-  // Fetch all videos
   const { data: videos, error } = await supabase.from("videos").select("*").order("created_at", { ascending: false })
 
   if (error) {
@@ -49,6 +49,13 @@ export default async function VideosPage() {
   }
 
   const videoIds = videos?.map((v) => v.id) || []
+  const userIds = videos?.map((v) => v.user_id) || []
+
+  // Fetch profiles for the video uploaders
+  const { data: profiles } = await supabase.from("profiles").select("*").in("user_id", userIds)
+
+  // Create a map of user_id to profile for quick lookup
+  const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || [])
 
   // Get like counts for all videos
   const { data: likeCounts } = await supabase.from("video_likes").select("video_id").in("video_id", videoIds)
@@ -113,6 +120,7 @@ export default async function VideosPage() {
               const canDelete = userIsAdmin || isOwner
               const likeCount = likeCountMap.get(video.id) || 0
               const isLiked = userLikesSet.has(video.id)
+              const profile = profileMap.get(video.user_id)
 
               return (
                 <Card key={video.id} className="overflow-hidden hover:shadow-lg transition-shadow">
@@ -124,6 +132,24 @@ export default async function VideosPage() {
                       </div>
                       {canDelete && <DeleteVideoButton videoId={video.id} />}
                     </div>
+                    {profile && (
+                      <div className="flex items-center gap-3 mt-4 pt-4 border-t">
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={profile.photo_url || undefined} />
+                          <AvatarFallback className="bg-primary/10 text-primary">
+                            {profile.display_name?.[0]?.toUpperCase() || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900">{profile.display_name}</p>
+                          {profile.bio && (
+                            <p className="text-xs text-gray-600 truncate" title={profile.bio}>
+                              {profile.bio}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </CardHeader>
                   <CardContent>
                     {embedUrl ? (
